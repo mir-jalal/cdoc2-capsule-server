@@ -46,16 +46,30 @@ jobs:
           overwrite-settings: true #generate settings.xml
           cache: maven
 
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
       - name: Build with Maven
         run: |
           echo "Debug env vars: is_fork=$IS_FORK base_repo=$BASE_REPO MAVEN_REPO=$MAVEN_REPO"
           mvn help:active-profiles
           echo "Using Maven repo=$(mvn help:evaluate -Dexpression=github_ci.maven_repo -q -DforceStdout)"
-          mvn -B verify
+          mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=$SONAR_PROJECT
         env:
           GITHUB_TOKEN: ${{ github.token }} # GITHUB_TOKEN is the default env for the password
           IS_FORK: ${{needs.fork_setup.outputs.is_fork}}
           BASE_REPO: ${{needs.fork_setup.outputs.base_repo}}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
 
     # Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
